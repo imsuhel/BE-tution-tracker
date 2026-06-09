@@ -80,7 +80,7 @@ export const createFee = async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     const [fee] = await pool.query<any[]>(
-      `SELECT f.*, s.name as student_name, b.name as batch_name
+      `SELECT f.*, s.name as student_name, s.roll_number as roll_number, b.name as batch_name
        FROM fees f
        JOIN batch_enrollments be ON f.enrollment_id = be.id
        JOIN students s ON be.student_id = s.id
@@ -148,6 +148,7 @@ export const listFees = async (req: AuthRequest, res: Response): Promise<void> =
       `SELECT
           f.*,
           s.name AS student_name,
+          s.roll_number AS roll_number,
           b.name AS batch_name,
           (
             COALESCE(CAST(c.duration AS UNSIGNED), 0) * c.monthly_fee
