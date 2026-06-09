@@ -169,22 +169,46 @@ export const listFees = async (req: AuthRequest, res: Response): Promise<void> =
       [...params, limit, offset]
     );
 
-    const [metricsRows] = await pool.query<any[]>(
-      `SELECT
-          COALESCE(SUM(CASE WHEN f.paid = 0 THEN f.amount END), 0) AS totalPending,
-          COALESCE(SUM(CASE WHEN f.paid = 1 AND MONTH(f.payment_date) = MONTH(CURRENT_DATE()) AND YEAR(f.payment_date) = YEAR(CURRENT_DATE()) THEN f.amount END), 0) AS collectedThisMonth,
-          0 AS overdue
-       FROM fees f
-       JOIN batch_enrollments be ON f.enrollment_id = be.id
+    const [pendingRows] = await pool.query<any[]>(
+      `SELECT 
+          COALESCE(
+            SUM(
+              GREATEST(
+                0, 
+                (COALESCE(CAST(c.duration AS UNSIGNED), 0) * c.monthly_fee) - 
+                (
+                  SELECT COALESCE(SUM(f.amount), 0) 
+                  FROM fees f 
+                  WHERE f.enrollment_id = be.id AND f.paid = 1
+                )
+              )
+            ), 
+            0
+          ) AS totalPending
+       FROM batch_enrollments be
        JOIN batches b ON be.batch_id = b.id
+       JOIN courses c ON b.course_id = c.id
        WHERE b.center_id = ?`,
       [center.id]
     );
 
+    const [collectedRows] = await pool.query<any[]>(
+      `SELECT
+          COALESCE(SUM(f.amount), 0) AS collectedThisMonth
+       FROM fees f
+       JOIN batch_enrollments be ON f.enrollment_id = be.id
+       JOIN batches b ON be.batch_id = b.id
+       WHERE b.center_id = ? 
+         AND f.paid = 1 
+         AND MONTH(f.payment_date) = MONTH(CURRENT_DATE()) 
+         AND YEAR(f.payment_date) = YEAR(CURRENT_DATE())`,
+      [center.id]
+    );
+
     const metrics = {
-      totalPending: Number(metricsRows[0].totalPending),
-      collectedThisMonth: Number(metricsRows[0].collectedThisMonth),
-      overdue: Number(metricsRows[0].overdue)
+      totalPending: Number(pendingRows[0].totalPending),
+      collectedThisMonth: Number(collectedRows[0].collectedThisMonth),
+      overdue: 0
     };
 
     res.status(200).json({
