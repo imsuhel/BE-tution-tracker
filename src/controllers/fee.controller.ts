@@ -205,10 +205,20 @@ export const listFees = async (req: AuthRequest, res: Response): Promise<void> =
       [center.id]
     );
 
+    const [totalCollectionRows] = await pool.query<any[]>(
+      `SELECT
+          COALESCE(SUM(f.amount), 0) AS totalCollection
+       FROM fees f
+       JOIN batch_enrollments be ON f.enrollment_id = be.id
+       JOIN batches b ON be.batch_id = b.id
+       WHERE b.center_id = ? AND f.paid = 1`,
+      [center.id]
+    );
+
     const metrics = {
       totalPending: Number(pendingRows[0].totalPending),
       collectedThisMonth: Number(collectedRows[0].collectedThisMonth),
-      overdue: 0
+      totalCollection: Number(totalCollectionRows[0].totalCollection)
     };
 
     res.status(200).json({
