@@ -11,6 +11,7 @@ import batchRoutes from './routes/batch.routes';
 import feeRoutes from './routes/fee.routes';
 import attendanceRoutes from './routes/attendance.routes';
 import centerRoutes from './routes/center.routes';
+import examRoutes from './routes/exam.routes';
 
 const app: Application = express();
 
@@ -87,6 +88,7 @@ app.use('/api/batches', batchRoutes);
 app.use('/api/fees', feeRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/center', centerRoutes);
+app.use('/api/exams', examRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────
 app.use((req: Request, res: Response) => {

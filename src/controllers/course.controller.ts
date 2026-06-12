@@ -247,7 +247,40 @@ export const addModule = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    const { name, order_index } = req.body;
+    const { name, order_index, modules } = req.body;
+
+    // Handle bulk insertion if modules is an array
+    if (Array.isArray(modules)) {
+      const [maxOrder] = await pool.query<any[]>(
+        'SELECT COALESCE(MAX(order_index), 0) AS max_order FROM course_modules WHERE course_id = ?',
+        [req.params.id]
+      );
+      let currentMaxOrder = maxOrder[0].max_order;
+
+      const insertedModules: any[] = [];
+      for (let i = 0; i < modules.length; i++) {
+        const modName = typeof modules[i] === 'string' ? modules[i] : modules[i].name;
+        if (!modName || !modName.trim()) continue;
+
+        currentMaxOrder += 1;
+        const moduleId = uuidv4();
+        await pool.query(
+          'INSERT INTO course_modules (id, course_id, name, order_index) VALUES (?, ?, ?, ?)',
+          [moduleId, req.params.id, modName.trim(), currentMaxOrder]
+        );
+        insertedModules.push({
+          id: moduleId,
+          course_id: req.params.id,
+          name: modName.trim(),
+          order_index: currentMaxOrder,
+        });
+      }
+
+      res.status(201).json({ message: 'Modules added successfully', modules: insertedModules });
+      return;
+    }
+
+    // Single module insertion (original behavior)
     if (!name) {
       res.status(400).json({ error: 'Module name is required' });
       return;
@@ -266,7 +299,7 @@ export const addModule = async (req: AuthRequest, res: Response): Promise<void> 
     const moduleId = uuidv4();
     await pool.query(
       'INSERT INTO course_modules (id, course_id, name, order_index) VALUES (?, ?, ?, ?)',
-      [moduleId, req.params.id, name, finalOrder]
+      [moduleId, req.params.id, name.trim(), finalOrder]
     );
 
     const [module] = await pool.query<any[]>('SELECT * FROM course_modules WHERE id = ?', [moduleId]);

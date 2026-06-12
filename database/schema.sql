@@ -374,3 +374,56 @@ INSERT IGNORE INTO fees (id, enrollment_id, month, amount, due_date, paid) VALUE
    1500,
    '2024-06-10',
    FALSE);
+-- ------------------------------------------------------------
+-- Table structure for `exams`
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `exams` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `batch_id` CHAR(36) NOT NULL,
+  `center_id` CHAR(36) NOT NULL,
+  `name` TEXT NOT NULL,
+  `exam_date` DATE NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_exams_batch_id` (`batch_id`),
+  KEY `idx_exams_center_id` (`center_id`),
+  CONSTRAINT `fk_exams_batch` FOREIGN KEY (`batch_id`) REFERENCES `batches` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_exams_center` FOREIGN KEY (`center_id`) REFERENCES `centers` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Table structure for `exam_papers`
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `exam_papers` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `exam_id` CHAR(36) NOT NULL,
+  `name` TEXT NOT NULL,
+  `max_marks` INT NOT NULL DEFAULT 100,
+  `passing_marks` INT NOT NULL DEFAULT 35,
+  `order_index` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_exam_papers_exam_id` (`exam_id`),
+  CONSTRAINT `fk_exam_papers_exam` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Table structure for `exam_results`
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `exam_results` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `exam_id` CHAR(36) NOT NULL,
+  `paper_id` CHAR(36) NOT NULL,
+  `student_id` CHAR(36) NOT NULL,
+  `enrollment_id` CHAR(36) NOT NULL,
+  `marks_obtained` INT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_exam_result` (`exam_id`,`paper_id`,`student_id`),
+  KEY `idx_exam_results_exam_id` (`exam_id`),
+  KEY `idx_exam_results_paper_id` (`paper_id`),
+  KEY `idx_exam_results_student_id` (`student_id`),
+  CONSTRAINT `fk_exam_results_exam` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_exam_results_paper` FOREIGN KEY (`paper_id`) REFERENCES `exam_papers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_exam_results_student` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
